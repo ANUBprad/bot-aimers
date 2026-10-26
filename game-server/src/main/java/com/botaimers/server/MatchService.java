@@ -5,12 +5,28 @@ import com.botaimers.engine.Bot;
 import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
-/** In-memory match storage: restart clears history; persistence comes later. */
+/** Database-backed storage for server-simulated AI matches. */
 @Service
 public final class MatchService {
-    private final Map<UUID, MatchRecord> matches = new ConcurrentHashMap<>();
+    private final SimulatedMatchRepository repository;
+    private final ObjectMapper mapper;
+
+    public MatchService(SimulatedMatchRepository repository, ObjectMapper mapper) {
+        this.repository = repository;
+        this.mapper = mapper;
+    }
+
+    private MatchRecord decode(SimulatedMatchEntity entity) {
+        try {
+            return new MatchRecord(entity.id, entity.createdAt, entity.firstName,
+                    entity.secondName, mapper.readValue(entity.resultJson, TacticalBattleResult.class));
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Corrupt saved match " + entity.id, e);
+        }
+    }
 
     public MatchRecord create(MatchRequest request) {
         String firstName = request.firstName().trim();
@@ -26,18 +42,21 @@ public final class MatchService {
                 new Bot(secondName, 60, 10, 4), new GridPoint(7, 2), TacticalPolicies.cautious(15),
                 40);
         MatchRecord record = new MatchRecord(UUID.randomUUID(), Instant.now(), firstName, secondName, result);
-        matches.put(record.id(), record);
+        try {
+            repository.save(new SimulatedMatchEntity(record.id(), record.createdAt(),
+                    firstName, secondName, mapper.writeValueAsString(result)));
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Cannot serialize match result", e);
+        }
         return record;
     }
 
     public Optional<MatchRecord> find(UUID id) {
-        return Optional.ofNullable(matches.get(id));
+        return repository.findById(id).map(this::decode);
     }
 
     public List<MatchRecord> all() {
-        return matches.values().stream()
-                .sorted(Comparator.comparing(MatchRecord::createdAt).reversed()
-                        .thenComparing(MatchRecord::id))
-                .toList();
+        return repository.findAllByOrderByCreatedAtDescIdAsc().stream()
+                .map(this::decode).toList();
     }
 }
