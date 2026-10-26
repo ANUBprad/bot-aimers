@@ -3,11 +3,15 @@ package com.botaimers.server;
 import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+
 
 @Service
 public final class PlayedMatchService {
-    private final Map<UUID, PlayedMatchRecord> matches = new ConcurrentHashMap<>();
+    private final PlayedMatchRepository repository;
+
+    public PlayedMatchService(PlayedMatchRepository repository) {
+        this.repository = repository;
+    }
 
     public PlayedMatchRecord save(PlayedMatchRequest request) {
         String player = request.playerName().trim();
@@ -22,13 +26,12 @@ public final class PlayedMatchService {
         PlayedMatchRecord record = new PlayedMatchRecord(UUID.randomUUID(), Instant.now(),
                 player, opponent, winner, request.turns(), request.playerHealth(),
                 request.opponentHealth(), false);
-        matches.put(record.id(), record);
+        repository.save(new PlayedMatchEntity(record));
         return record;
     }
 
     public List<PlayedMatchRecord> all() {
-        return matches.values().stream().sorted(
-                Comparator.comparing(PlayedMatchRecord::createdAt).reversed()
-                        .thenComparing(PlayedMatchRecord::id)).toList();
+        return repository.findAllByOrderByCreatedAtDescIdAsc().stream()
+                .map(PlayedMatchEntity::toRecord).toList();
     }
 }
