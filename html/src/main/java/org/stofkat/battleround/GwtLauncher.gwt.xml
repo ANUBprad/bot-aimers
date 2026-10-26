@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<module rename-to='battleround'>
+	<inherits name='com.badlogic.gdx.backends.gdx_backends_gwt' />
+	
+	<!-- 
+	These paths are actually important!
+	I have no proof but I think that GWT only converts the following packages into javascript.
+	
+	So right now it's:
+	org.stofkat.battleround.client
+	org.stofkat.battleround.core
+	etc.
+	 -->
+	<source path='client'/>
+	<source path='core'/>
+	<source path='html'/>
+	<source path='level'/>
+	<source path='common'/>
+	<source path='shared'/>
+	<public path="resources" />
+
+	<entry-point class='org.stofkat.battleround.html.GwtLauncher'/>
+	<set-configuration-property name="gdx.assetpath" value="assets" />
+	<set-configuration-property name="gdx.assetoutputpath" value="html/target/battleround-html-1.0-SNAPSHOT" />
+	
+	<!-- Remove this when we've upgraded to the newest libgdx -->
+	<set-configuration-property name='xsiframe.failIfScriptTag' value='FALSE'/>
+</module>
