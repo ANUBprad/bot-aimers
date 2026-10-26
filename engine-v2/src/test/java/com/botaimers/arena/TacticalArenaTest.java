@@ -26,13 +26,13 @@ class TacticalArenaTest {
         assertEquals(new GridPoint(0, 0), result.firstPosition());
     }
 
-    @Test void blockedPathEndsAtRoundLimitWithoutOverlap() {
+    @Test void blockedPathEndsEarlyWithoutOverlap() {
         GridMap map = new GridMap(3, 1, Set.of(new GridPoint(1, 0)));
         TacticalBattleResult result = new TacticalArena(map).fight(
                 new Bot("A", 10, 2, 0), new GridPoint(0, 0),
                 new Bot("B", 10, 2, 0), new GridPoint(2, 0), 3);
         assertTrue(result.draw());
-        assertEquals(3, result.rounds());
+        assertEquals(1, result.rounds());
         assertEquals(new GridPoint(0, 0), result.firstPosition());
         assertEquals(new GridPoint(2, 0), result.secondPosition());
     }
