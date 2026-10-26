@@ -32,6 +32,9 @@ public final class TacticalGame extends ApplicationAdapter {
     private GridMap map;
     private PlayerBattle battle;
     private String feedback = "Move toward the enemy. Press F to attack.";
+    private final MatchReporter reporter = new MatchReporter("http://localhost:8080");
+    private volatile String networkStatus = "Play offline or start Spring Boot to save results.";
+    private boolean reported;
 
     @Override public void create() {
         camera = new OrthographicCamera();
@@ -53,6 +56,8 @@ public final class TacticalGame extends ApplicationAdapter {
                 new Bot("Player", 60, 12, 3), new GridPoint(1, 2),
                 new Bot("CPU", 60, 10, 4), new GridPoint(7, 2));
         feedback = "WASD / arrows: move | F: attack | G: guard | R: restart";
+        networkStatus = "Play offline or start Spring Boot to save results.";
+        reported = false;
     }
 
     @Override public void render() {
@@ -72,6 +77,11 @@ public final class TacticalGame extends ApplicationAdapter {
             else if (Gdx.input.isKeyJustPressed(Input.Keys.G))
                 command = PlayerBattle.Command.GUARD;
             if (command != null) feedback = battle.takeTurn(command);
+        }
+        if (battle.finished() && !reported) {
+            reported = true;
+            networkStatus = "Saving result...";
+            reporter.report(battle).thenAccept(status -> networkStatus = status);
         }
         ScreenUtils.clear(0.055f, 0.075f, 0.11f, 1f);
         viewport.apply();
@@ -105,6 +115,7 @@ public final class TacticalGame extends ApplicationAdapter {
         font.draw(batch, "CPU  " + battle.enemyHealth() + " HP", 510, 545);
         font.draw(batch, "WASD / ARROWS: MOVE     F: ATTACK     G: GUARD     R: RESTART", 190, 94);
         font.draw(batch, "TURN " + battle.turns() + "  |  " + feedback, 190, 62);
+        font.draw(batch, networkStatus, 190, 112);
         if (battle.finished()) {
             font.setColor(Color.YELLOW);
             font.draw(batch, "GAME OVER - " + battle.winner() + " wins! Press R to play again.", 190, 38);
