@@ -24,7 +24,7 @@ public final class GridMap {
     public int width() { return width; }
     public int height() { return height; }
     public boolean inBounds(GridPoint point) {
-        return point != null && point.x() < width && point.y() < height;
+        return point != null && point.x() >= 0 && point.y() >= 0 && point.x() < width && point.y() < height;
     }
     public boolean walkable(GridPoint point) {
         return inBounds(point) && !walls.contains(point);
