@@ -12,7 +12,7 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.botaimers.arena.*;
 import com.botaimers.engine.Bot;
-import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Isometric military sci-fi presentation. All movement, combat, and AI decisions
@@ -33,6 +33,8 @@ public final class TacticalGame extends ApplicationAdapter {
     private OrthographicCamera camera;
     private FitViewport viewport;
     private GridMap map;
+    private ArenaGenerator.Arena arena;
+    private long nextSeed;
     private PlayerBattle battle;
     private final MatchReporter reporter = new MatchReporter("http://localhost:8080");
     private volatile String networkStatus = "OFFLINE READY  /  CONNECT SERVER TO SAVE";
@@ -48,17 +50,17 @@ public final class TacticalGame extends ApplicationAdapter {
         shapes = new ShapeRenderer();
         batch = new SpriteBatch();
         font = new BitmapFont();
+        nextSeed = ThreadLocalRandom.current().nextLong();
         reset();
     }
 
     private void reset() {
-        map = new GridMap(9, 5, Set.of(
-                new GridPoint(4, 0), new GridPoint(4, 1),
-                new GridPoint(4, 3), new GridPoint(4, 4)));
+        arena = ArenaGenerator.generate(nextSeed++);
+        map = arena.map();
         battle = new PlayerBattle(map,
-                new Bot("Player", 60, 12, 3), new GridPoint(1, 2),
-                new Bot("CPU", 60, 10, 4), new GridPoint(7, 2));
-        feedback = "ELIMINATE THE HOSTILE UNIT";
+                new Bot("Player", 60, 12, 3), arena.playerSpawn(),
+                new Bot("CPU", 60, 10, 4), arena.enemySpawn());
+        feedback = "MISSION " + arena.theme() + "  /  SEED " + arena.seed();
         networkStatus = "OFFLINE READY  /  CONNECT SERVER TO SAVE";
         reported = false;
         paused = false;
@@ -128,7 +130,7 @@ public final class TacticalGame extends ApplicationAdapter {
         font.setColor(Color.WHITE);
         font.draw(batch, "ALPHA UNIT   " + battle.playerHealth() + "/60 HP", 28, 592);
         font.draw(batch, "HOSTILE   " + battle.enemyHealth() + "/60 HP", 630, 592);
-        font.draw(batch, "TURN " + battle.turns() + "  /  TACTICAL ENGAGEMENT", 28, 526);
+        font.draw(batch, "TURN " + battle.turns() + "  /  " + arena.theme() + "  /  " + map.width() + "x" + map.height(), 28, 526);
         font.draw(batch, "WASD / ARROWS : MOVE     F : STRIKE     G : GUARD     P / ESC : PAUSE     R : RESTART", 28, 86);
         font.setColor(CYAN);
         font.draw(batch, feedback, 28, 58);
@@ -147,11 +149,11 @@ public final class TacticalGame extends ApplicationAdapter {
     }
 
     private float screenX(int x, int y) {
-        return CX + (x - y - 2f) * HALF_W;
+        return CX + (x - y - (map.width() - map.height()) / 2f) * HALF_W;
     }
 
     private float screenY(int x, int y) {
-        return CY + (x + y - 6f) * HALF_H;
+        return CY + (x + y - (map.width() + map.height() - 2) / 2f) * HALF_H;
     }
 
     private void diamond(float x, float y, Color color) {
